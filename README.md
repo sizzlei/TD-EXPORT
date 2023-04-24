@@ -3,7 +3,7 @@ MySQL Table Definition Export tool.
 
 Export to Excel and Markdown is supported.
 
-## Usang
+## Usage
 ```shell
 ./TD-EXPORT -output=[excel|markdown]
 ```
