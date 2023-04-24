@@ -1,10 +1,10 @@
 package main 
 
 import (
-	// "golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/ssh/terminal"
 	log "github.com/sirupsen/logrus"
 	"fmt"
-	"ktdex/lib"
+	"TD-EXPORT/lib"
 	"os"
 	"flag"
 	"strings"
@@ -28,7 +28,6 @@ func main() {
 	var conn lib.TdexStructure
 	var err error
 
-
 	// DB Endpoint
 	conn.Endpoint, err = lib.GetOpt("Endpoint")
 	if err != nil {
@@ -39,8 +38,11 @@ func main() {
 	// DB Port
 	conn.Port, err = lib.GetOpt("Port")
 	if err != nil {
-		log.Errorf("%s",err)
-		os.Exit(1)
+		log.Warningf("%s",err)
+		log.Infof("Default set Port : 3306")
+	}
+	if conn.Port == nil {
+		conn.Port = lib.PointerStr("3306")
 	}
 
 	// DB User(Information_schema Allow user)
@@ -95,6 +97,7 @@ func main() {
 	}
 
 	var excelz lib.ExcelStructure
+	var mdfiles lib.MdStructure
 	switch strings.ToUpper(output) {
 	case "EXCEL":
 		// Create Excel Object and Sheet
@@ -103,11 +106,16 @@ func main() {
 			log.Errorf("%s",err)
 			os.Exit(1)
 		}
+		log.Infof("Setup Excel Files")	
 	case "MARKDOWN":
-		log.Infof("%s",output)
-		os.Exit(1)
+		// Create Excel Object and Sheet
+		mdfiles, err = lib.CreateMarkdown(conn)
+		if err != nil {
+			log.Errorf("%s",err)
+			os.Exit(1)
+		}
+		log.Infof("Setup Markdown Files")	
 	}
-		
 	
 	log.Infof("Get Schema Count : %d",len(conn.Schema))
 
@@ -129,27 +137,35 @@ func main() {
 				columns, err := t.GetColumns(conn.Object,k)
 				if err != nil {
 					log.Errorf("%s - %s : %s",k,t,err)
-					break
+					continue
 				}
 	
 				// Get t Index Info
 				indexes, err := t.GetIndexes(conn.Object,k)
 				if err != nil {
 					log.Errorf("%s - %s : %s",k,t,err)
-					break
+					continue
 				}
 				
 				// Get t Constraint Info
 				consts, err := t.GetConstraints(conn.Object,k)
 				if err != nil {
 					log.Errorf("%s - %s : %s",k,t,err)
-					break
+					continue
 				}
 	
 				// Add Table Struct
 				tables[i].Columns 		= columns
 				tables[i].Indexes 		= indexes
 				tables[i].Constraints	= consts
+			} else if t.General.TableType == "VIEW"{
+				ViewDDL, err := t.GetViewSQL(conn.Object,k)
+				if err != nil {
+					log.Errorf("%s - %s : %s",k,t,err)
+					continue
+				}
+
+				tables[i].View = ViewDDL
 			}
 		}
 		switch strings.ToUpper(output) {
@@ -159,8 +175,11 @@ func main() {
 				log.Warningf("%s",err)
 			}
 		case "MARKDOWN":
-			log.Infof("%s",output)
-			os.Exit(1)
+			err = mdfiles.WriteTable(k, tables)
+			if err != nil {
+				log.Errorf("%s",err)
+				os.Exit(1)
+			}
 		}
 
 		conn.Schema[k] = []lib.PerTable{}
@@ -172,15 +191,14 @@ func main() {
 	switch strings.ToUpper(output) {
 	case "EXCEL":
 		// Save Excel
-		err = excelz.FileSave("test.xlsx")
+		err = excelz.FileSave(fmt.Sprintf("%s.xlsx",*conn.Endpoint))
 		if err != nil {
 			log.Errorf("%s",err)
 			os.Exit(1)
 		}
-	case "MARKDOWN":
-		log.Infof("%s",output)
-		os.Exit(1)
 	}
+
+	log.Infof("Export Complete.")
 }
 
 

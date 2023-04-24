@@ -24,14 +24,14 @@ type PerTable struct {
 	Columns 	[]ColumnInfo
 	Constraints []ConstInfo 	
 	Indexes 	[]IndexInfo
-
+	View		ViewInfo
 }
 
 type GeneralInfo struct {
 	TableType 	string
-	Engine		string
-	RowFormat 	string
-	Collate 	string
+	Engine		sql.NullString
+	RowFormat 	sql.NullString
+	Collate 	sql.NullString
 	Comment 	sql.NullString
 }
 
@@ -59,6 +59,12 @@ type IndexInfo struct {
 	IndexName 		string 
 	IndexUnique 	int
 	IndexCol 		string
+}
+
+type ViewInfo struct {
+	ViewQuery 	string
+	Charset 	string 
+	Collate		string
 }
 
 func (c TdexStructure) GetDBObject() (*sql.DB, error) {
@@ -327,4 +333,19 @@ func (p PerTable) GetConstraints(o *sql.DB, s string) ([]ConstInfo, error) {
 	}
 
 	return consts, nil
+}
+
+func (p PerTable) GetViewSQL(o *sql.DB, s string) (ViewInfo, error) {
+	getQuery := `
+		SHOW CREATE TABLE %s.%s 
+	`
+
+	var v ViewInfo
+	var viewName string
+	err := o.QueryRow(fmt.Sprintf(getQuery,s,p.TableName)).Scan(&viewName,&v.ViewQuery,&v.Charset,&v.Collate)
+	if err != nil {
+		return v, err
+	}
+
+	return v, nil
 }
