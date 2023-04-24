@@ -25,6 +25,7 @@ type PerTable struct {
 	Constraints []ConstInfo 	
 	Indexes 	[]IndexInfo
 	View		ViewInfo
+	DDL 		string
 }
 
 type GeneralInfo struct {
@@ -348,4 +349,19 @@ func (p PerTable) GetViewSQL(o *sql.DB, s string) (ViewInfo, error) {
 	}
 
 	return v, nil
+}
+
+func (p PerTable) GetTableDDL(o *sql.DB,s string) (string,error) {
+	getQuery := `
+		SHOW CREATE TABLE %s.%s
+	`
+
+	var ddl string 
+	var tableName string
+	err := o.QueryRow(fmt.Sprintf(getQuery,s,p.TableName)).Scan(&tableName,&ddl)
+	if err != nil {
+		return ddl, err
+	}
+
+	return ddl, nil
 }

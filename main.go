@@ -13,12 +13,12 @@ import (
 const (
 	appName	= "TD-EXPORT"
 	desc 	= "Table Definition Export"
-	version	= "v0.1.0"
+	version	= "v0.2.0"
 )
 
 func main() {
 	var output string 
-	flag.StringVar(&output,"output","excel","KTDEX Output(excel / markdown)")
+	flag.StringVar(&output,"output","excel","KTDEX Output(excel / markdown / sql)")
 	flag.Parse()
 
 	log.Infof("%s %s",appName,version)
@@ -98,6 +98,7 @@ func main() {
 
 	var excelz lib.ExcelStructure
 	var mdfiles lib.MdStructure
+	var sqlfiles lib.SQLStructure
 	switch strings.ToUpper(output) {
 	case "EXCEL":
 		// Create Excel Object and Sheet
@@ -115,8 +116,16 @@ func main() {
 			os.Exit(1)
 		}
 		log.Infof("Setup Markdown Files")	
+	case "SQL":
+		// Create Excel Object and Sheet
+		sqlfiles, err = lib.CreateSQL(conn)
+		if err != nil {
+			log.Errorf("%s",err)
+			os.Exit(1)
+		}
+		log.Infof("Setup SQL Files")	
 	}
-	
+
 	log.Infof("Get Schema Count : %d",len(conn.Schema))
 
 	// Get Info
@@ -132,41 +141,53 @@ func main() {
 		log.Infof("%s Table Column/Index/Const Load",k)
 		for i, t := range tables {
 			// Exception View Table
-			if t.General.TableType == "BASE TABLE" {
-				// Get t Column Info
-				columns, err := t.GetColumns(conn.Object,k)
-				if err != nil {
-					log.Errorf("%s - %s : %s",k,t,err)
-					continue
-				}
+			switch strings.ToUpper(output) {
+			case "EXCEL", "MARKDOWN":
+				if t.General.TableType == "BASE TABLE" {
+					// Get t Column Info
+					columns, err := t.GetColumns(conn.Object,k)
+					if err != nil {
+						log.Errorf("%s - %s : %s",k,t,err)
+						continue
+					}
+		
+					// Get t Index Info
+					indexes, err := t.GetIndexes(conn.Object,k)
+					if err != nil {
+						log.Errorf("%s - %s : %s",k,t,err)
+						continue
+					}
+					
+					// Get t Constraint Info
+					consts, err := t.GetConstraints(conn.Object,k)
+					if err != nil {
+						log.Errorf("%s - %s : %s",k,t,err)
+						continue
+					}
+		
+					// Add Table Struct
+					tables[i].Columns 		= columns
+					tables[i].Indexes 		= indexes
+					tables[i].Constraints	= consts
+				} else if t.General.TableType == "VIEW"{
+					ViewDDL, err := t.GetViewSQL(conn.Object,k)
+					if err != nil {
+						log.Errorf("%s - %s : %s",k,t,err)
+						continue
+					}
 	
-				// Get t Index Info
-				indexes, err := t.GetIndexes(conn.Object,k)
-				if err != nil {
-					log.Errorf("%s - %s : %s",k,t,err)
-					continue
+					tables[i].View = ViewDDL
 				}
-				
-				// Get t Constraint Info
-				consts, err := t.GetConstraints(conn.Object,k)
-				if err != nil {
-					log.Errorf("%s - %s : %s",k,t,err)
-					continue
-				}
-	
-				// Add Table Struct
-				tables[i].Columns 		= columns
-				tables[i].Indexes 		= indexes
-				tables[i].Constraints	= consts
-			} else if t.General.TableType == "VIEW"{
-				ViewDDL, err := t.GetViewSQL(conn.Object,k)
+			case "SQL":
+				tableDDL, err := t.GetTableDDL(conn.Object,k)
 				if err != nil {
 					log.Errorf("%s - %s : %s",k,t,err)
 					continue
 				}
 
-				tables[i].View = ViewDDL
+				tables[i].DDL = tableDDL
 			}
+			
 		}
 		switch strings.ToUpper(output) {
 		case "EXCEL":
@@ -176,6 +197,12 @@ func main() {
 			}
 		case "MARKDOWN":
 			err = mdfiles.WriteTable(k, tables)
+			if err != nil {
+				log.Errorf("%s",err)
+				os.Exit(1)
+			}
+		case "SQL":
+			err = sqlfiles.WriteTable(k, tables)
 			if err != nil {
 				log.Errorf("%s",err)
 				os.Exit(1)
@@ -200,5 +227,7 @@ func main() {
 
 	log.Infof("Export Complete.")
 }
+
+
 
 
