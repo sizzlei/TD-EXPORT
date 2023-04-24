@@ -1,11 +1,11 @@
 # TD-EXPORT v0.1.0
 MySQL Table Definition Export tool.
 
-Export to Excel and Markdown is supported.
+Export to Excel and Markdown, SQL is supported.
 
 ## Usage
 ```shell
-./TD-EXPORT -output=[excel|markdown]
+./TD-EXPORT -output=[excel|markdown|sql]
 ```
 
 ### Example
@@ -38,3 +38,4 @@ INFO[0031] Export Complete.
 - The extracted file is saved in the same path as the tool, and the file name is as follows.
     - Excel : ```{Endpoint}.xlsx```
     - Markdown : ```{Schema}({Endpoint}).md```
+    - SQL : ```{Schema}({Endpoint}).sql```
