@@ -165,6 +165,7 @@ func (e ExcelStructure) WriteTable(s string, p []PerTable) error {
 				z.SetCellStr(s, fmt.Sprintf("E%d",RowNum),"Referance")
 				z.SetCellStr(s, fmt.Sprintf("I%d",RowNum),"ON DELETE")
 				z.SetCellStr(s, fmt.Sprintf("J%d",RowNum),"ON UPDATE")
+				z.SetCellStyle(s, fmt.Sprintf("A%d",RowNum),fmt.Sprintf("J%d",RowNum),e.Style["title"])
 				RowNum++
 
 				for _, o := range t.Constraints {
