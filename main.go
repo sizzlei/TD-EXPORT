@@ -18,7 +18,7 @@ const (
 
 func main() {
 	var output string 
-	flag.StringVar(&output,"output","excel","KTDEX Output(excel / markdown / sql)")
+	flag.StringVar(&output,"output","excel","Output(excel / markdown / sql)")
 	flag.Parse()
 
 	log.Infof("%s %s",appName,version)

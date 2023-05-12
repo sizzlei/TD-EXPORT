@@ -18,7 +18,7 @@ func CreateMarkdown(c TdexStructure) (MdStructure,error) {
 	fileMap = make(map[string]*os.File)
 
 	for k, _ := range c.Schema {
-		f := fmt.Sprintf("%s(%s).md",k,*c.Endpoint)
+		f := fmt.Sprintf("%s.md",k)
 		_ = os.Remove(f)
 		fileMap[k], err = os.OpenFile(f,os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
